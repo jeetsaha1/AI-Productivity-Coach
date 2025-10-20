@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Focus Timer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Focus Timer</h1>
+    <form method="post">
+        <input type="number" name="duration" placeholder="Minutes" required>
+        <button type="submit">Start Timer</button>
+    </form>
+    {% if started %}
+        <p>Timer started for {{ duration }} minutes!</p>
+    {% endif %}
+    <a href="/">Back to Home</a>
+</body>
+</html>
