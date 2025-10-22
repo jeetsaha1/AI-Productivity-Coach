@@ -1,0 +1,132 @@
+:root{
+  --bg-1:#f6f9ff; --bg-2:#eef7ff;
+  --accent-1:#6c5ce7; --accent-2:#00b4d8;
+  --accent-3:#ff7ab6; --muted:#6b7280;
+  --glass: rgba(255,255,255,0.65);
+  --card-shadow: 0 10px 30px rgba(18,38,63,0.08);
+  --glass-border: rgba(255,255,255,0.6);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:"Segoe UI",Inter,system-ui,Segoe UI,Arial,sans-serif;background:
+  radial-gradient(1000px 600px at 10% 10%, rgba(108,92,231,0.10), transparent 10%),
+  linear-gradient(180deg,var(--bg-1),var(--bg-2)); color:#071125; -webkit-font-smoothing:antialiased;}
+.container{max-width:1100px;margin:28px auto;padding:20px}
+.header {
+  display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;
+}
+.brand {
+  display:flex;align-items:center;gap:12px;
+}
+.logo {
+  width:56px;height:56px;border-radius:12px;background:
+  conic-gradient(from 120deg,var(--accent-1),var(--accent-2),var(--accent-3));
+  box-shadow: 0 6px 20px rgba(99,102,241,0.18);display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:700;font-size:18px;
+}
+.title {font-size:28px;font-weight:700;color:#243b55}
+.subtitle{color:var(--muted);font-size:14px}
+
+.nav {display:flex;gap:10px;align-items:center}
+.btn {
+  border:0;padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));
+  color:#fff;cursor:pointer;box-shadow: var(--card-shadow);transition:transform .12s ease, box-shadow .12s ease, opacity .12s;
+}
+.btn.secondary { background: linear-gradient(90deg,#fff,#fff); color:var(--accent-1); border:1px solid rgba(16,24,40,0.04)}
+.btn:active{transform:translateY(1px)}
+.hero {
+  display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px;
+}
+
+/* Card / glass */
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.70));
+  border-radius:14px;padding:16px;box-shadow:var(--card-shadow);border:1px solid var(--glass-border);
+}
+
+/* Chat layout */
+.chat-box { max-width:960px;margin:12px auto }
+.controls { display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px}
+.messages {
+  min-height:360px;max-height:520px;overflow:auto;padding:18px;border-radius:12px;background:
+  linear-gradient(180deg, rgba(250,252,255,1), rgba(243,248,255,0.9));box-shadow: inset 0 2px 8px rgba(16,24,40,0.02);
+  border: 1px solid rgba(16,24,40,0.03);
+}
+.msg { display:block;margin:12px 0;max-width:78%;padding:12px 14px;border-radius:12px; position:relative; opacity:0; transform:translateY(10px); animation:pop .18s forwards;}
+@keyframes pop { to {opacity:1; transform:none} }
+.msg.user { margin-left:auto;background:linear-gradient(90deg,#2f80ed,#1454c0); color:white; box-shadow:0 8px 20px rgba(22,115,255,0.12); text-align:right;}
+.msg.ai { margin-right:auto;background:linear-gradient(180deg,#ffffff,#f3f9ff); color:#08263a; border:1px solid rgba(15,54,90,0.03);}
+.msg .meta { display:block;font-size:12px;color:var(--muted);margin-top:8px}
+
+/* Typing indicator */
+.msg.typing { background:linear-gradient(90deg,#eef7ff,#fff); }
+.typing .dots { display:inline-block; width:40px; text-align:left; }
+.typing .dot { display:inline-block;margin-right:4px;width:8px;height:8px;background:#cfe8ff;border-radius:50%;opacity:0.6;animation:dots 1s infinite; }
+.typing .dot:nth-child(2){animation-delay:.12s} .typing .dot:nth-child(3){animation-delay:.24s}
+@keyframes dots { 0%{transform:translateY(0);opacity:0.4}50%{transform:translateY(-6px);opacity:1}100%{transform:translateY(0);opacity:0.4} }
+
+/* input */
+.input-row { display:flex;gap:10px;margin-top:12px;align-items:center; }
+.input-row input { flex:1;padding:12px;border-radius:10px;border:1px solid rgba(16,24,40,0.06);font-size:15px;background:rgba(255,255,255,0.9) }
+.send-btn {
+  padding:10px 14px;border-radius:10px;border:0;background:linear-gradient(90deg,var(--accent-3),var(--accent-2));color:#fff;cursor:pointer;
+  box-shadow:0 8px 20px rgba(0,180,216,0.12); transform:translateY(0); transition: transform .12s ease, box-shadow .12s;
+}
+.send-btn:hover{ transform:translateY(-2px); box-shadow:0 18px 40px rgba(0,180,216,0.14) }
+
+/* Quick actions */
+.quick-actions { margin-top:12px; display:flex;gap:8px; flex-wrap:wrap }
+.quick-actions button { padding:8px 10px;border-radius:10px;border:0;background:linear-gradient(90deg,#fff,#f6fbff); color:var(--accent-1); cursor:pointer; box-shadow: 0 6px 14px rgba(99,102,241,0.06); }
+
+/* timer finished pulse effect */
+.pulse {
+  animation: pulse 1s ease-in-out 0s 3;
+}
+@keyframes pulse {
+  0%{ box-shadow: 0 0 0 0 rgba(99,102,241,0.18) }
+  70%{ box-shadow: 0 0 0 18px rgba(99,102,241,0) }
+  100%{ box-shadow: 0 0 0 0 rgba(99,102,241,0) }
+}
+
+/* Writing pad styles (paper-like, large, animated) */
+.writing-pad {
+  width: 100%;
+  min-height: 64px;
+  max-height: 320px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(20,30,60,0.06);
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,254,255,0.95));
+  box-shadow: 0 10px 24px rgba(16,40,80,0.06), inset 0 -2px 6px rgba(16,40,80,0.02);
+  resize: none;
+  font-size: 16px;
+  line-height: 1.45;
+  outline: none;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s;
+}
+
+/* larger heading-like placeholder look */
+.writing-pad::placeholder { color: rgba(10,20,40,0.35); font-style: italic; }
+
+/* focus emphasis */
+.writing-pad:focus {
+  transform: translateY(-2px);
+  border-color: rgba(108,92,231,0.9);
+  box-shadow: 0 18px 38px rgba(37,99,235,0.10);
+}
+
+/* small layout helpers */
+.form-actions { display:flex; gap:10px; margin-top:10px; align-items:center; }
+.form-actions .btn.secondary { background: linear-gradient(90deg,#fff,#fff); color:var(--accent-1); border:1px solid rgba(16,24,40,0.06); padding:8px 12px; }
+
+/* responsive */
+@media (max-width:700px){ .messages{max-height:420px} .title{font-size:20px} .logo{width:48px;height:48px}}
+
+/* mobile / touch improvements */
+@media (max-width:700px){
+  .container { padding:12px; }
+  .btn, .send-btn { padding:14px 16px; font-size:16px; border-radius:14px; }
+  .input-row input, .writing-pad { font-size:16px; padding:14px; }
+  .messages { padding:12px; max-height:70vh; }
+  .quick-actions { gap:6px; }
+  .msg { max-width:92%; }
+}

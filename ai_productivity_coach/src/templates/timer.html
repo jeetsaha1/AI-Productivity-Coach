@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Timer - AI Productivity Coach</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <main class="container">
+        <h1>Focus Timer</h1>
+        <a href="{{ url_for('home') }}">← Home</a>
+
+        <form id="timerForm" class="card" onsubmit="return startTimerClient(event)">
+            <label style="font-weight:600;margin-bottom:8px;display:block">Session note</label>
+            <textarea id="note" name="note" class="writing-pad" rows="3" placeholder="Write your focus goal for this session (e.g. 'Draft introduction section')."></textarea>
+
+            <div style="display:flex;gap:12px;align-items:center;margin-top:10px">
+                <div style="flex:0 0 140px">
+                    <label style="display:block;font-weight:600;margin-bottom:6px">Minutes</label>
+                    <input id="duration" name="duration" type="number" min="1" value="25" required style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(16,24,40,0.06)">
+                </div>
+                <div style="flex:1">
+                    <button class="btn" id="startBtn" type="submit">Start</button>
+                </div>
+            </div>
+        </form>
+
+        <div id="countdown" class="card" style="display:none;">
+            <h2 id="timeDisplay">00:00</h2>
+            <button class="btn" onclick="stopTimer()">Stop</button>
+        </div>
+    </main>
+
+    <!-- Optional custom sound: put notify.mp3 into src/static/ -->
+    <audio id="alarm" src="{{ url_for('static', filename='notify.mp3') }}" preload="auto"></audio>
+
+<script>
+let timerInterval = null;
+let audioCtx = null;
+let alarmEl = document.getElementById('alarm');
+
+// Ensure AudioContext is created/resumed on user gesture (Start button)
+function ensureAudioUnlocked() {
+    try {
+        if (!audioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+        }
+        if (audioCtx.state === 'suspended') {
+            return audioCtx.resume();
+        }
+        return Promise.resolve();
+    } catch (e) {
+        return Promise.reject(e);
+    }
+}
+
+// WebAudio beep fallback
+function playBeep(duration = 1000, frequency = 880, type = 'sine') {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const ctx = audioCtx || new AudioContext();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = type;
+        o.frequency.value = frequency;
+        o.connect(g);
+        g.connect(ctx.destination);
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.5, ctx.currentTime + 0.01);
+        o.start();
+        setTimeout(() => {
+            g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.05);
+            o.stop(ctx.currentTime + 0.06);
+            if (!audioCtx) ctx.close();
+        }, duration);
+    } catch (err) {
+        console.warn('WebAudio fallback failed', err);
+    }
+}
+
+function playAlarm() {
+    // first try HTMLAudioElement
+    if (alarmEl && alarmEl.src) {
+        const playPromise = alarmEl.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(() => {
+                // autoplay blocked or failed -> fallback
+                playBeep(1200, 880, 'sine');
+            });
+            return;
+        }
+    }
+    // no audio element or failed -> fallback
+    playBeep(1200, 880, 'sine');
+}
+
+function startTimerClient(e){
+    e.preventDefault();
+    const minutes = parseInt(document.getElementById('duration').value, 10);
+    if(!minutes) return;
+    // unlock audio first (user gesture)
+    ensureAudioUnlocked().catch(()=>{}).then(()=>{
+        // notify server (non-blocking)
+        fetch('/timer', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({duration: minutes})
+        }).catch(()=>{});
+        startCountdown(minutes*60);
+    });
+    return false;
+}
+
+function startCountdown(seconds){
+    clearInterval(timerInterval);
+    const display = document.getElementById('timeDisplay');
+    document.getElementById('countdown').style.display = 'block';
+    function tick(){
+        const m = Math.floor(seconds/60).toString().padStart(2,'0');
+        const s = (seconds%60).toString().padStart(2,'0');
+        display.textContent = `${m}:${s}`;
+        if(seconds<=0){
+            clearInterval(timerInterval);
+            playAlarm();
+            // visual cue
+            document.getElementById('countdown').style.border = '3px solid #1f6feb';
+            setTimeout(()=> {
+                document.getElementById('countdown').style.border = '';
+                document.getElementById('countdown').style.display = 'none';
+            }, 3000);
+        }
+        seconds--;
+    }
+    tick();
+    timerInterval = setInterval(tick, 1000);
+}
+
+function stopTimer(){ clearInterval(timerInterval); document.getElementById('countdown').style.display='none'; }
+
+// quick debug helper: click this in console to test audio immediately:
+// ensureAudioUnlocked().then(()=>document.getElementById('alarm').play().catch(()=>playBeep()));
+
+  // autosize for the timer note pad
+  (function(){ const ta = document.getElementById('note'); if(ta){
+      const resize = ()=>{ ta.style.height='auto'; ta.style.height = (ta.scrollHeight)+'px'; };
+      ta.addEventListener('input', resize); window.addEventListener('load', resize); resize();
+  }})();
+
+  // ensure audio unlocked on Start button (keeps existing startTimerClient behavior)
+  document.getElementById('startBtn').addEventListener('click', ()=> {
+    try { if(window.audioCtx && window.audioCtx.state === 'suspended') window.audioCtx.resume(); } catch(e){}
+  });
+</script>
+
+</body>
+</html>

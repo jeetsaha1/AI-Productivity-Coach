@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasks - AI Productivity Coach</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+      /* small inline confetti styles */
+      .confetti-piece {
+        position:fixed; width:10px; height:14px; opacity:0.95; z-index:9999;
+        pointer-events:none; transform-origin:center;
+        transition: transform 900ms cubic-bezier(.2,.9,.2,1), opacity 900ms;
+      }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <div class="header">
+          <div class="brand">
+            <div class="logo">AI</div>
+            <div>
+              <div class="title">Task Manager</div>
+              <div class="subtitle">Add tasks with a roomy writing pad — AI helpers ready</div>
+            </div>
+          </div>
+          <div class="nav">
+            <a class="btn secondary" href="{{ url_for('home') }}">Home</a>
+            <a class="btn" href="{{ url_for('timer_page') }}">Focus Timer</a>
+            <a class="btn" href="{{ url_for('chat_page') }}">Chat</a>
+          </div>
+        </div>
+
+        <!-- Task Form (writing pad) -->
+        <form id="taskForm" class="card" onsubmit="return submitTask(event)">
+            <textarea name="title" id="title" class="writing-pad" rows="3"
+                placeholder="Describe the task clearly — include goal/outcome and deadline (e.g. 'Write project README — goal: explain setup and usage; deadline: Fri')"
+                required></textarea>
+
+            <div class="form-actions">
+                <button class="btn" type="submit">Add Task</button>
+                <button type="button" class="btn secondary" onclick="quickAI()">AI Breakdown</button>
+            </div>
+        </form>
+
+        <!-- Task List -->
+        <section id="taskList" class="card" style="margin-top:16px;">
+            {% if tasks %}
+                <ul class="list">
+                    {% for task in tasks %}
+                        <li class="list-item">
+                            <div>
+                                <strong>{{ task.title }}</strong>
+                                <div class="meta">Created: {{ task.get('created_at','—') }}</div>
+                            </div>
+                            <div class="actions">
+                                <form method="post" action="{{ url_for('delete_task', task_id=task.id) }}" style="display:inline">
+                                    <button class="btn small" type="submit">Delete</button>
+                                </form>
+                                <button class="btn small" onclick="analyze({ task,title,tojson })">AI Breakdown</button>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p style="padding:12px;color:var(--muted)">No tasks yet — add your first task above.</p>
+            {% endif %}
+        </section>
+
+        <!-- AI Result Section -->
+        <section class="card" id="aiResult" style="display:none;margin-top:12px;">
+            <h3>AI Breakdown</h3>
+            <pre id="aiText" style="white-space:pre-wrap;"></pre>
+            <button class="btn" onclick="hideResult()">Close</button>
+        </section>
+    </main>
+
+<script>
+/* autosize textarea */
+(function(){
+  const ta = document.getElementById('title');
+  if(!ta) return;
+  const resize = ()=>{ ta.style.height='auto'; ta.style.height = (ta.scrollHeight)+'px'; };
+  ta.addEventListener('input', resize);
+  window.addEventListener('load', resize);
+  resize();
+})();
+
+/* post via fetch so we can show confetti before reload */
+async function submitTask(e){
+  e.preventDefault();
+  const ta = document.getElementById('title');
+  const text = ta.value.trim();
+  if(!text) return;
+  // disable while sending
+  ta.disabled = true;
+  try {
+    const res = await fetch('{{ url_for("tasks_page") }}', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({title: text})
+    });
+    if(!res.ok) throw new Error('Failed to save task');
+    burstConfetti();
+    // brief pause to show confetti, then reload to show updated list
+    setTimeout(()=> window.location.reload(), 700);
+  } catch(err) {
+    alert('Could not add task: ' + err.message);
+    ta.disabled = false;
+  }
+  return false;
+}
+
+/* quick AI breakdown button */
+async function quickAI(){
+  const text = document.getElementById('title').value.trim();
+  if(!text) return alert('Write a task first for AI to analyze.');
+  analyze(text);
+}
+
+/* AI analyze call */
+async function analyze(text){
+  document.getElementById('aiText').textContent = 'Thinking...';
+  document.getElementById('aiResult').style.display = 'block';
+  try {
+    const res = await fetch('/ai/breakdown', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({text})
+    });
+    const data = await res.json();
+    document.getElementById('aiText').textContent = data.result || JSON.stringify(data, null, 2);
+  } catch(e){
+    document.getElementById('aiText').textContent = 'Error: ' + e;
+  }
+}
+
+function hideResult(){ document.getElementById('aiResult').style.display = 'none'; }
+
+/* simple confetti burst */
+function burstConfetti(){
+  const colors = ['#6c5ce7','#00b4d8','#ff7ab6','#ffd166','#06d6a0'];
+  const count = 28;
+  for(let i=0;i<count;i++){
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.left = (window.innerWidth/2 + (Math.random()*200-100)) + 'px';
+    el.style.top = (window.innerHeight/2 + (Math.random()*60-30)) + 'px';
+    el.style.background = colors[Math.floor(Math.random()*colors.length)];
+    el.style.transform = `translate3d(0,0,0) rotate(${Math.random()*360}deg)`;
+    document.body.appendChild(el);
+    // animate outward
+    requestAnimationFrame(()=> {
+      const dx = (Math.random()*600-300);
+      const dy = (Math.random()*300-50);
+      el.style.transition = 'transform 900ms cubic-bezier(.2,.9,.2,1), opacity 900ms';
+      el.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(${Math.random()*720}deg)`;
+      el.style.opacity = '0';
+    });
+    // remove after animation
+    setTimeout(()=> el.remove(), 1000);
+  }
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Chat - AI Productivity Coach</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="container chat-box">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">AI</div>
+        <div>
+          <div class="title">AI Productivity Coach</div>
+          <div class="subtitle">Concise, actionable productivity help</div>
+        </div>
+      </div>
+      <div class="nav">
+        <a class="btn secondary" href="{{ url_for('home') }}">Home</a>
+        <button class="btn" id="clearBtn">Clear</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="messages" class="messages" aria-live="polite"></div>
+
+      <div class="quick-actions">
+        <button onclick="quick('Breakdown: Write project README')">Breakdown task</button>
+        <button onclick="quick('Set timer: 25')">Start 25m timer</button>
+        <button onclick="quick('Suggest priority for study')">Suggest priority</button>
+      </div>
+
+      <div class="input-row">
+        <input id="msg" placeholder="Try: 'Breakdown: write blog post' or ask for priorities" autocomplete="off" />
+        <button class="send-btn" id="sendBtn">Send</button>
+      </div>
+    </div>
+  </main>
+
+  <audio id="notify" src="{{ url_for('static', filename='notify.mp3') }}" preload="auto"></audio>
+
+<script>
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('msg');
+const sendBtn = document.getElementById('sendBtn');
+const clearBtn = document.getElementById('clearBtn');
+const notify = document.getElementById('notify');
+
+function fmtTime(ts){
+  if(ts) return new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  return new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+function createMsg(role, text, time){
+  const m = document.createElement('div');
+  m.className = 'msg ' + (role === 'user' ? 'user' : 'ai');
+  const meta = `<div class="meta">${fmtTime(time)}</div>`;
+  m.innerHTML = `<div class="content">${text}</div>${meta}`;
+  return m;
+}
+
+function typingEl(){
+  const t = document.createElement('div');
+  t.className = 'msg ai typing';
+  t.innerHTML = `<span class="content"><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></span>`;
+  return t;
+}
+
+async function fetchHistory(){
+  try{
+    const res = await fetch('/chat/history');
+    const j = await res.json();
+    messagesEl.innerHTML = '';
+    for(const m of j.history){
+      messagesEl.appendChild(createMsg(m.role, m.content, m.time));
+    }
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }catch(e){ console.warn('history load',e) }
+}
+
+async function sendMessage(text){
+  if(!text) return;
+  messagesEl.appendChild(createMsg('user', text));
+  const tEl = typingEl(); messagesEl.appendChild(tEl);
+  inputEl.value = ''; inputEl.disabled = true; sendBtn.disabled = true;
+  try{
+    const res = await fetch('/chat/api', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({message:text})
+    });
+    if(!res.ok){ const t = await res.text(); tEl.replaceWith(createMsg('ai','Error: '+t)); }
+    else{
+      const data = await res.json();
+      tEl.replaceWith(createMsg('ai', data.reply, new Date().toISOString()));
+      try{ notify.play().catch(()=>{}); }catch(e){}
+      if(data.meta){
+        if(data.meta.create_task) messagesEl.appendChild(createMsg('ai', `(Task created) ${data.meta.create_task}`));
+        if(data.meta.start_timer) messagesEl.appendChild(createMsg('ai', `(Timer started) ${data.meta.start_timer} minutes`));
+      }
+    }
+  }catch(e){ tEl.replaceWith(createMsg('ai','Error: '+e.message)); }
+  finally{ inputEl.disabled = false; sendBtn.disabled = false; inputEl.focus(); messagesEl.scrollTop = messagesEl.scrollHeight; }
+}
+
+sendBtn.addEventListener('click', ()=> sendMessage(inputEl.value.trim()));
+inputEl.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(inputEl.value.trim()); }});
+clearBtn.addEventListener('click', async ()=>{ await fetch('/chat/clear', {method:'POST'}); messagesEl.innerHTML=''; messagesEl.appendChild(createMsg('ai',"Session cleared. Ask me something!")); });
+
+function quick(text){ sendMessage(text); }
+
+window.addEventListener('load', async ()=>{ await fetchHistory(); if(!messagesEl.children.length) messagesEl.appendChild(createMsg('ai',"Hello — I'm your AI productivity coach. Try: 'Breakdown: <task>' or 'Set timer: 25'")); });
+</script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+"""Parse config, collect arguments, create instances."""
+
+import configparser
+import os
+
+from . import stack as _stack
+from . import tools
+
+__all__ = ['ConfigMeta', 'StackedMeta']
+
+DEFAULT = 'default'
+
+
+class ConfigMeta(type):
+    """Parse file, create instance for each section, return by section or alias."""
+
+    filename = None
+
+    _pass_notfound = False
+
+    _parser = configparser.ConfigParser
+
+    _encoding = None
+
+    @staticmethod
+    def _split_aliases(aliases: str) -> list[str]:
+        return aliases.replace(',', ' ').split()
+
+    def __init__(self, name: str, bases, dct) -> None:  # noqa: N804
+        if self.filename is None:
+            return
+
+        if not os.path.isabs(self.filename):
+            self.filename = os.path.join(tools.class_path(self), self.filename)
+
+        self.filename = os.path.realpath(self.filename)
+
+        if not self._pass_notfound and not os.path.exists(self.filename):
+            open(self.filename)
+
+        parser = self._parser()
+
+        with open(self.filename, encoding=self._encoding) as fd:
+            parser.read_file(fd)
+
+        self._keys = []
+        self._kwargs = {}
+        self._aliases = {}
+
+        for key in parser.sections():
+            items = ((k, v) for k, v in parser.items(key))
+            kwargs = dict(items, key=key)
+
+            if 'aliases' in kwargs:
+                aliases = kwargs.pop('aliases')
+                if aliases.strip():
+                    aliases = self._split_aliases(aliases)
+                    self._aliases.update((a, key) for a in aliases)
+                    kwargs['aliases'] = aliases
+
+            if 'inherits' in kwargs:
+                kwargs = dict(((k, v)
+                               for k, v in parser.items(kwargs['inherits'])
+                               if k != 'aliases'), **kwargs)
+
+            self._keys.append(key)
+            self._kwargs[key] = kwargs
+
+        self._cache = {}
+
+    def __call__(self, key=DEFAULT):  # noqa: N804
+        if isinstance(key, self):
+            return key
+
+        if (key := self._aliases.get(key, key)) in self._cache:
+            inst = self._cache[key]
+        else:
+            kwargs = self._kwargs.pop(key)
+            inst = self.create(**kwargs)
+        return inst
+
+    def create(self, key=None, **kwargs):  # noqa: N804
+        inst = super().__call__(key=key, **kwargs)
+
+        if key is not None:
+            self._cache[key] = inst
+
+        return inst
+
+    def __iter__(self):  # noqa: N804
+        for key in self._keys:
+            yield self(key)
+
+    def pprint_all(self) -> None:  # noqa: N804
+        for c in self:
+            print(f'{c}\n')
+
+
+class StackedMeta(ConfigMeta):
+    """Can register multiple filenames and returns the first match."""
+
+    stack: _stack.ConfigStack | None = None
+
+    def __init__(self, name: str, bases, dct) -> None:
+        super().__init__(name, bases, dct)
+
+        if self.filename is not None:
+            self.stack = _stack.ConfigStack(self)
+
+    def add(self, filename: str, position: int = 0, caller_steps: int = 1) -> None:
+        if not os.path.isabs(filename):
+            filename = os.path.join(tools.caller_path(caller_steps), filename)
+
+        self.stack.insert(position, filename)  # type: ignore[union-attr]
+
+    def __getitem__(self, filename):
+        return self.stack[filename]
+
+    def __call__(self, key=DEFAULT):
+        if isinstance(key, self):
+            return key
+
+        for cls in self.stack:
+            try:
+                return super(StackedMeta, cls).__call__(key)
+            except KeyError:
+                pass
+        else:
+            raise KeyError(key)
+
+    def __iter__(self):
+        seen = set()
+        for cls in self.stack:
+            for inst in super(StackedMeta, cls).__iter__():
+                if inst.key not in seen:
+                    yield inst
+                    seen.add(inst.key)
+
+    def __repr__(self) -> str:
+        if self.stack is None:
+            return super().__repr__()
+        return f'<class {self.__module__}.{self.__name__}[{self.filename!r}]>'

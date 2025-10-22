@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#1158d6">
+  <title>AI Productivity Coach</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="container">
+    
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="logo" aria-label="Logo">AI</div>
+        <div class="brand-text">
+          <div class="title">AI Productivity Coach</div>
+          <div class="subtitle">Task breakdowns • Focus timer • Chat coach</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <a class="btn" href="{{ url_for('tasks_page') }}">Task Manager</a>
+        <a class="btn" href="{{ url_for('timer_page') }}">Focus Timer</a>
+        <a class="btn" href="{{ url_for('chat_page') }}">Chat</a>
+      </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="card hero">
+      <div class="hero-text">
+        <h2>Stay focused. Ship more.</h2>
+        <p class="muted">Use AI to break down tasks, set timers, and get short actionable advice.</p>
+      </div>
+      <div class="hero-action">
+        <button class="btn" ;onclick="location.href='{{ url_for('chat_page') }}'">Start Chat</button>
+      </div>
+    </section>
+
+  </main>
+</body>
+</html>
