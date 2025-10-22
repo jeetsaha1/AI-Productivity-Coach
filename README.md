@@ -1,7 +1,5 @@
 # AI Productivity Coach
 
-![AI Productivity Coach Banner](https://your-image-link-here.com/banner.png)
-
 **AI Productivity Coach** is an intelligent productivity assistant designed to help users manage tasks, maintain focus, and get actionable AI-powered insights. It combines task management, focus timers, and a chat-based AI coach to boost efficiency and keep users on track.
 
 ---
